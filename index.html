@@ -3,16 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>放デイ・ガイド（画像安定版）</title>
+    <title>放課後等デイサービス・ガイド</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel (JSXの変換用) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
         body { font-family: 'Noto Sans JP', sans-serif; }
-        .img-loading { background: #f3f4f6; position: relative; }
-        .img-loading::after { content: "Loading..."; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 12px; }
+        body.modal-open { overflow: hidden; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900">
@@ -21,87 +27,340 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
+        // アイコンコンポーネント
+        const Icon = ({ name, size = 24, className = "" }) => {
+            const icons = {
+                home: <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />,
+                search: <><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></>,
+                truck: <><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" /><path d="M15 18H9" /><path d="M19 18h2a1 1 0 0 0 1-1v-5h-7v7Z" /><path d="M13 9h4" /><circle cx="7" cy="18" r="2" /><circle cx="17" cy="18" r="2" /></>,
+                utensils: <><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" /><path d="M7 2v20" /><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" /></>,
+                "map-pin": <><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></>,
+                "chevron-right": <path d="m9 18 6-6-6-6" />,
+                x: <><path d="M18 6 6 18" /><path d="m6 6 12 12" /></>,
+                clock: <><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></>,
+                calendar: <><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></>,
+                phone: <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />,
+                "refresh-cw": <><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5 life-h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M3 21v-5h5" /></>
+            };
+
+            return (
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width={size}
+                    height={size}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={className}
+                >
+                    {icons[name] || null}
+                </svg>
+            );
+        };
+
         const App = () => {
             const SPREADSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-3HsrNideEQfqOrC604NY0NkwaQ7sxjMog2vuwVymliZN6XMsE58_wA-rErOJMMHP9Y49BIUiLDq1/pub?output=csv";
             const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1594608661623-aa0bd3a69d98?w=800';
             
             const [facilities, setFacilities] = useState([]);
+            const [searchTerm, setSearchTerm] = useState('');
+            const [selectedFacility, setSelectedFacility] = useState(null);
             const [loading, setLoading] = useState(true);
 
-            // 【超重要】Googleドライブのリンクを「表示用」に強制変換するロジック
-            const getValidImageUrl = (url) => {
-                if (!url || typeof url !== 'string') return DEFAULT_IMAGE;
-                const trimmedUrl = url.trim();
+            // URLを画像表示用に変換する関数（Googleドライブ対応）
+            const formatImageUrl = (url) => {
+                if (!url) return DEFAULT_IMAGE;
                 
-                // Google Drive 共有リンクの判定
-                if (trimmedUrl.includes('drive.google.com')) {
-                    let fileId = '';
-                    // パターン1: /d/xxxx/view
-                    if (trimmedUrl.includes('/d/')) {
-                        fileId = trimmedUrl.split('/d/')[1].split('/')[0];
-                    } 
-                    // パターン2: id=xxxx
-                    else if (trimmedUrl.includes('id=')) {
-                        fileId = trimmedUrl.split('id=')[1].split('&')[0];
-                    }
-                    
-                    if (fileId) {
-                        // thumbnail 形式の方が高速でブロックされにくい
-                        return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
-                    }
+                // Google Driveの共有リンクを直リンクに変換
+                if (url.includes('drive.google.com')) {
+                    const fileId = url.match(/\/d\/([^/]+)/)?.[1] || url.match(/id=([^&]+)/)?.[1];
+                    if (fileId) return `https://drive.google.com/uc?export=view&id=${fileId}`;
                 }
-                return trimmedUrl;
+                
+                return url;
             };
 
             const parseCSV = (text) => {
-                const lines = text.split(/\r?\n/);
-                const headers = lines[0].split(',').map(h => h.trim());
-                return lines.slice(1).map(line => {
-                    const values = line.split(',');
-                    const obj = {};
-                    headers.forEach((h, i) => obj[h] = values[i] ? values[i].trim() : '');
-                    return obj;
-                }).filter(f => f['事業所名']);
+                const result = [];
+                let row = [];
+                let cell = '';
+                let inQuotes = false;
+                for (let i = 0; i < text.length; i++) {
+                    const char = text[i];
+                    const nextChar = text[i + 1];
+                    if (inQuotes) {
+                        if (char === '"' && nextChar === '"') { cell += '"'; i++; } 
+                        else if (char === '"') { inQuotes = false; } 
+                        else { cell += char; }
+                    } else {
+                        if (char === '"') { inQuotes = true; } 
+                        else if (char === ',') { row.push(cell); cell = ''; } 
+                        else if (char === '\n' || char === '\r') {
+                            if (char === '\r' && nextChar === '\n') i++;
+                            row.push(cell);
+                            if (row.length > 1 || row[0] !== '') result.push(row);
+                            row = []; cell = '';
+                        } else { cell += char; }
+                    }
+                }
+                if (cell || row.length > 0) { row.push(cell); result.push(row); }
+                return result;
             };
 
             useEffect(() => {
-                fetch(SPREADSHEET_CSV_URL)
-                    .then(res => res.text())
-                    .then(text => {
-                        setFacilities(parseCSV(text));
-                        setLoading(false);
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        setLoading(false);
-                    });
+                const fetchCSVData = async () => {
+                    setLoading(true);
+                    try {
+                        const response = await fetch(SPREADSHEET_CSV_URL);
+                        const csvText = await response.text();
+                        const rows = parseCSV(csvText);
+                        if (rows.length < 2) return;
+                        const headers = rows[0].map(h => h.trim());
+                        const data = rows.slice(1).map(row => {
+                            const obj = {};
+                            headers.forEach((header, i) => {
+                                let val = row[i] || '';
+                                val = val.trim().replace(/<[^>]*>?/gm, '');
+                                obj[header] = val;
+                            });
+                            return obj;
+                        }).filter(item => item['事業所名']);
+                        setFacilities(data);
+                    } catch (err) { console.error("Fetch error:", err); } 
+                    finally { setLoading(false); }
+                };
+                fetchCSVData();
             }, []);
 
+            useEffect(() => {
+                if (selectedFacility) { document.body.classList.add('modal-open'); } 
+                else { document.body.classList.remove('modal-open'); }
+            }, [selectedFacility]);
+
+            const filtered = useMemo(() => {
+                const lowerSearch = searchTerm.toLowerCase();
+                return facilities.filter(f => 
+                    (f['事業所名'] || '').toLowerCase().includes(lowerSearch) || 
+                    (f['住所'] || '').toLowerCase().includes(lowerSearch) ||
+                    (f['主な通学先'] || '').toLowerCase().includes(lowerSearch)
+                );
+            }, [facilities, searchTerm]);
+
             return (
-                <div className="p-4 max-w-4xl mx-auto">
-                    <h1 className="text-2xl font-bold mb-6">事業所リスト</h1>
-                    {loading ? (
-                        <p>読み込み中...</p>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {facilities.map((f, i) => (
-                                <div key={i} className="bg-white rounded-xl shadow overflow-hidden border">
-                                    <div className="h-48 overflow-hidden bg-gray-100 relative">
-                                        <img 
-                                            src={getValidImageUrl(f.pic1)} 
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => {
-                                                console.log("Image Load Error:", e.target.src);
-                                                e.target.src = DEFAULT_IMAGE;
-                                            }}
-                                        />
+                <div className="min-h-screen pb-10">
+                    <header className="bg-blue-600 text-white p-6 shadow-md sticky top-0 z-10">
+                        <div className="max-w-4xl mx-auto">
+                            <h1 className="text-xl font-bold mb-4 flex items-center gap-2">
+                                <Icon name="home" /> 放デイ・ガイド
+                            </h1>
+                            <div className="relative max-w-xl">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                    <Icon name="search" size={18} />
+                                </span>
+                                <input
+                                    type="text"
+                                    placeholder="事業所・住所・学校名で検索..."
+                                    className="w-full pl-10 pr-4 py-3 rounded-xl text-gray-900 focus:outline-none shadow-inner border-none"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="max-w-4xl mx-auto p-4 mt-4">
+                        {loading ? (
+                            <div className="text-center py-20 text-gray-400">
+                                <Icon name="refresh-cw" className="animate-spin mb-4" size={40} />
+                                <p>読み込み中...</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {filtered.length > 0 ? filtered.map((f, i) => (
+                                    <div 
+                                        key={i} 
+                                        className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden cursor-pointer border border-gray-100 flex flex-col group"
+                                        onClick={() => setSelectedFacility(f)}
+                                    >
+                                        <div className="h-48 w-full bg-gray-200 relative overflow-hidden">
+                                            <img 
+                                                src={formatImageUrl(f.pic1)} 
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                                alt={f['事業所名']}
+                                                onError={(e) => { e.target.src = DEFAULT_IMAGE; }}
+                                            />
+                                            <div className="absolute top-3 left-3 flex gap-1">
+                                                {f['送迎']?.includes('有') && (
+                                                    <span className="bg-blue-600/90 text-white text-[10px] px-2 py-1 rounded-md font-bold backdrop-blur-sm flex items-center gap-1">
+                                                        <Icon name="truck" size={12} /> 送迎あり
+                                                    </span>
+                                                )}
+                                                {f['食事']?.includes('有') && (
+                                                    <span className="bg-orange-500/90 text-white text-[10px] px-2 py-1 rounded-md font-bold backdrop-blur-sm flex items-center gap-1">
+                                                        <Icon name="utensils" size={12} /> 食事あり
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="p-5 flex-grow flex flex-col">
+                                            <h2 className="text-lg font-bold mb-2 text-gray-800 line-clamp-1">{f['事業所名']}</h2>
+                                            <div className="text-gray-500 text-xs mb-4 flex items-start gap-1">
+                                                <Icon name="map-pin" size={14} className="mt-0.5" />
+                                                <span className="line-clamp-1">{f['住所']}</span>
+                                            </div>
+                                            <div className="mt-auto flex items-center justify-end text-gray-300 group-hover:text-blue-500 transition-colors">
+                                                <Icon name="chevron-right" size={20} />
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="p-4">
-                                        <h2 className="font-bold text-lg">{f['事業所名']}</h2>
-                                        <p className="text-sm text-gray-500">{f['住所']}</p>
+                                )) : (
+                                    <div className="col-span-full text-center py-20 text-gray-400">
+                                        <p>該当する事業所が見つかりませんでした。</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </main>
+
+                    {selectedFacility && (
+                        <div 
+                            className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-0 sm:p-4 backdrop-blur-sm"
+                            onClick={() => setSelectedFacility(null)}
+                        >
+                            <div 
+                                className="bg-white w-full max-w-2xl h-full sm:h-auto sm:max-h-[90vh] sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col relative"
+                                onClick={e => e.stopPropagation()}
+                            >
+                                <button 
+                                    onClick={() => setSelectedFacility(null)}
+                                    className="absolute top-4 right-4 z-10 p-2 bg-white/80 rounded-full shadow hover:bg-white transition-colors"
+                                >
+                                    <Icon name="x" size={24} />
+                                </button>
+
+                                <div className="flex-grow overflow-y-auto custom-scrollbar">
+                                    <img 
+                                        src={formatImageUrl(selectedFacility.pic1)} 
+                                        className="w-full aspect-video object-cover" 
+                                        alt="Main" 
+                                        onError={(e) => { e.target.src = DEFAULT_IMAGE; }}
+                                    />
+                                    
+                                    <div className="grid grid-cols-2 gap-0.5 mt-0.5">
+                                        {[2, 3, 4, 5, 6].map(num => {
+                                            const imgUrl = selectedFacility[`pic${num}`];
+                                            if (!imgUrl) return null;
+                                            return (
+                                                <img 
+                                                    key={num} 
+                                                    src={formatImageUrl(imgUrl)} 
+                                                    className="w-full aspect-video object-cover" 
+                                                    alt={`Pic ${num}`} 
+                                                    onError={(e) => { e.target.style.display = 'none'; }}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+
+                                    <div className="p-6 sm:p-10">
+                                        <h2 className="text-2xl font-bold mb-6 text-gray-900 leading-tight">{selectedFacility['事業所名']}</h2>
+                                        
+                                        <div className="space-y-6">
+                                            <div className="bg-gray-50 p-5 rounded-2xl">
+                                                <div className="flex items-start gap-3 mb-4">
+                                                    <Icon name="map-pin" className="text-blue-500 mt-1" size={20} />
+                                                    <div>
+                                                        <p className="text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-wider">所在地</p>
+                                                        <p className="font-bold text-gray-800 leading-relaxed">{selectedFacility['住所']}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200">
+                                                    <a 
+                                                        href={`tel:${selectedFacility['電話番号']}`} 
+                                                        className="flex-1 bg-white border border-gray-200 text-blue-600 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-sm active:bg-blue-50 transition-all"
+                                                    >
+                                                        <Icon name="phone" size={16} /> 電話
+                                                    </a>
+                                                    <button 
+                                                        onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedFacility['住所'])}`, '_blank')}
+                                                        className="flex-1 bg-gray-900 text-white px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all"
+                                                    >
+                                                        <Icon name="map-pin" size={16} /> マップ
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100/50">
+                                                    <Icon name="clock" size={16} className="text-blue-500 mb-2" />
+                                                    <span className="text-xs font-bold text-blue-500 block mb-1">営業時間</span>
+                                                    <div className="space-y-4">
+                                                        <div>
+                                                            <p className="text-[10px] text-blue-400 font-bold mb-0.5">平日</p>
+                                                            <p className="text-lg font-bold text-blue-900 leading-none">{selectedFacility['開所時間']} - {selectedFacility['閉所時間']}</p>
+                                                        </div>
+                                                        {(selectedFacility['学校休業日開所時間'] || selectedFacility['学校休業日閉所時間']) && (
+                                                            <div className="pt-2 border-t border-blue-100/50">
+                                                                <p className="text-[10px] text-blue-400 font-bold mb-0.5">学校休業日</p>
+                                                                <p className="text-lg font-bold text-blue-900 leading-none">
+                                                                    {selectedFacility['学校休業日開所時間'] || '-'} - {selectedFacility['学校休業日閉所時間'] || '-'}
+                                                                </p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100/50">
+                                                    <Icon name="calendar" size={16} className="text-emerald-500 mb-2" />
+                                                    <span className="text-xs font-bold text-emerald-500 block mb-1">営業日</span>
+                                                    <div className="space-y-4">
+                                                        <div>
+                                                            <p className="text-[10px] text-emerald-400 font-bold mb-0.5">開所日</p>
+                                                            <p className="text-lg font-bold text-emerald-900 leading-none">{selectedFacility['開所日']}</p>
+                                                        </div>
+                                                        {selectedFacility['閉所日'] && (
+                                                            <div className="pt-2 border-t border-emerald-100/50">
+                                                                <p className="text-[10px] text-emerald-400 font-bold mb-0.5">閉所日</p>
+                                                                <p className="text-lg font-bold text-emerald-900 leading-none">{selectedFacility['閉所日']}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div className="bg-orange-50/50 p-5 rounded-2xl border border-orange-100/50">
+                                                    <Icon name="truck" size={16} className="text-orange-500 mb-2" />
+                                                    <span className="text-xs font-bold text-orange-500 block mb-1">サービス</span>
+                                                    <div className="space-y-2">
+                                                        <div className="flex justify-between text-sm font-bold"><span className="text-gray-600">送迎</span><span className="text-orange-800">{selectedFacility['送迎'] || '-'}</span></div>
+                                                        <div className="flex justify-between text-sm font-bold border-t border-orange-100 pt-2"><span className="text-gray-600">食事</span><span className="text-orange-800">{selectedFacility['食事'] || '-'}</span></div>
+                                                    </div>
+                                                </div>
+                                                <div className="bg-indigo-50/50 p-5 rounded-2xl border border-indigo-100/50">
+                                                    <Icon name="home" size={16} className="text-indigo-500 mb-2" />
+                                                    <span className="text-xs font-bold text-indigo-500 block mb-1">主な通学先</span>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {selectedFacility['主な通学先'] ? selectedFacility['主な通学先'].split(/・|、|,/).map((s, idx) => (
+                                                            <span key={idx} className="text-[11px] font-bold text-indigo-700 bg-white px-2 py-1 rounded border border-indigo-100 shadow-sm">{s.trim()}</span>
+                                                        )) : <span className="text-gray-400 text-sm">登録なし</span>}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {selectedFacility['アピールポイント'] && (
+                                                <div className="bg-amber-50 p-6 rounded-2xl border border-amber-100/50 leading-relaxed text-amber-900 whitespace-pre-wrap font-medium">
+                                                    {selectedFacility['アピールポイント']}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="h-10"></div>
                                     </div>
                                 </div>
-                            ))}
+                            </div>
                         </div>
                     )}
                 </div>
