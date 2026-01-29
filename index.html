@@ -22,10 +22,6 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        /**
-         * LucideアイコンをSVGとして描画するコンポーネント
-         * 隣接するJSX要素をフラグメント <>...</> で囲むように修正しました。
-         */
         const Icon = ({ name, size = 24, className = "" }) => {
             const icons = {
                 school: <path d="M12 22v-9M2 7l10-5 10 5v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7zM7 22V7M17 22V7" />,
@@ -35,29 +31,17 @@
                 phone: <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />,
                 x: <path d="M18 6 6 18M6 6l12 12" />
             };
-
             const content = icons[name] || icons.school;
-
             return (
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width={size}
-                    height={size}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className={className}
-                >
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
                     {content}
                 </svg>
             );
         };
 
         const App = () => {
-            const SPREADSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRndYJ984uCun7j3313vD-o_6iH6pE88Y1_2Yp8mK-7TqA39X_YI_kXpW_o5mR_y6v6R8_U6m-z_Y6Z/pub?output=csv";
+            // 更新されたCSV URL
+            const SPREADSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-3HsrNideEQfqOrC604NY0NkwaQ7sxjMog2vuwVymliZN6XMsE58_wA-rErOJMMHP9Y49BIUiLDq1/pub?output=csv";
 
             const [facilities, setFacilities] = useState([]);
             const [searchTerm, setSearchTerm] = useState('');
@@ -69,27 +53,33 @@
                 setLoading(true);
                 try {
                     const response = await fetch(SPREADSHEET_CSV_URL);
-                    if (!response.ok) throw new Error('データの取得に失敗しました。');
+                    if (!response.ok) throw new Error(`HTTPエラー: ${response.status}`);
+                    
                     const csvText = await response.text();
-
                     const lines = csvText.trim().split('\n');
-                    if (lines.length < 2) throw new Error('有効なデータが見つかりませんでした。');
+                    
+                    if (lines.length < 2) {
+                        throw new Error('CSVデータが空、またはヘッダーのみです。');
+                    }
                     
                     const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-                    const data = lines.slice(1).map(line => {
+                    
+                    const data = lines.slice(1).map((line) => {
                         const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                         const obj = {};
                         headers.forEach((header, i) => {
-                            let val = values[i]?.replace(/^"|"$/g, '').replace(/""/g, '"').trim();
-                            val = val?.replace(/<[^>]*>?/gm, '');
+                            let val = values[i]?.replace(/^"|"$/g, '').replace(/""/g, '"').trim() || "";
+                            val = val.replace(/<[^>]*>?/gm, '');
                             obj[header] = val;
                         });
                         return obj;
                     });
+                    
                     setFacilities(data);
                     setError(null);
                 } catch (err) {
-                    setError("データの読み込みに失敗しました。スプレッドシートの公開設定を確認してください。");
+                    console.error("Fetch error:", err);
+                    setError(`データの読み込みに失敗しました。URLが正しいか、スプレッドシートの「ウェブに公開（CSV形式）」設定が有効か確認してください。`);
                 } finally {
                     setLoading(false);
                 }
@@ -131,7 +121,11 @@
                                 <p>読み込み中...</p>
                             </div>
                         ) : error ? (
-                            <div className="bg-red-50 text-red-600 p-8 rounded-3xl text-center border border-red-100">{error}</div>
+                            <div className="bg-red-50 text-red-700 p-8 rounded-2xl border border-red-200">
+                                <p className="font-bold mb-2">エラーが発生しました：</p>
+                                <p className="text-sm opacity-80">{error}</p>
+                                <button onClick={fetchCSVData} className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold">再試行する</button>
+                            </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {filteredFacilities.map((facility, index) => (
@@ -158,10 +152,8 @@
                                         </div>
                                     </div>
                                 ))}
-                                {filteredFacilities.length === 0 && !loading && (
-                                    <div className="col-span-full text-center py-10 text-gray-500">
-                                        該当する事業所が見つかりませんでした。
-                                    </div>
+                                {filteredFacilities.length === 0 && (
+                                    <div className="col-span-full text-center py-10 text-gray-500">該当する事業所が見つかりませんでした。</div>
                                 )}
                             </div>
                         )}
