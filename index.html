@@ -31,10 +31,10 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        // ReactがDOM管理を失わないよう、SVGアイコンをコンポーネントとして定義
+        // アイコンコンポーネント
         const Icon = ({ name, size = 24, className = "" }) => {
             const icons = {
-                school: <path d="M12 22v-9M2 22h20M7 22v-5a1 1 0 0 1 1-1h8a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v5M12 2h10v12h-3M2 2h10v12h-3M2 14h20" />,
+                home: <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />,
                 search: <><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></>,
                 truck: <><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" /><path d="M15 18H9" /><path d="M19 18h2a1 1 0 0 0 1-1v-5h-7v7Z" /><path d="M13 9h4" /><circle cx="7" cy="18" r="2" /><circle cx="17" cy="18" r="2" /></>,
                 utensils: <><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" /><path d="M7 2v20" /><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" /></>,
@@ -73,47 +73,30 @@
             const [selectedFacility, setSelectedFacility] = useState(null);
             const [loading, setLoading] = useState(true);
 
-            // CSVパース用の関数（改行を含むセルに対応）
             const parseCSV = (text) => {
                 const result = [];
                 let row = [];
                 let cell = '';
                 let inQuotes = false;
-
                 for (let i = 0; i < text.length; i++) {
                     const char = text[i];
                     const nextChar = text[i + 1];
-
                     if (inQuotes) {
-                        if (char === '"' && nextChar === '"') {
-                            cell += '"';
-                            i++;
-                        } else if (char === '"') {
-                            inQuotes = false;
-                        } else {
-                            cell += char;
-                        }
+                        if (char === '"' && nextChar === '"') { cell += '"'; i++; } 
+                        else if (char === '"') { inQuotes = false; } 
+                        else { cell += char; }
                     } else {
-                        if (char === '"') {
-                            inQuotes = true;
-                        } else if (char === ',') {
-                            row.push(cell);
-                            cell = '';
-                        } else if (char === '\n' || char === '\r') {
+                        if (char === '"') { inQuotes = true; } 
+                        else if (char === ',') { row.push(cell); cell = ''; } 
+                        else if (char === '\n' || char === '\r') {
                             if (char === '\r' && nextChar === '\n') i++;
                             row.push(cell);
                             if (row.length > 1 || row[0] !== '') result.push(row);
-                            row = [];
-                            cell = '';
-                        } else {
-                            cell += char;
-                        }
+                            row = []; cell = '';
+                        } else { cell += char; }
                     }
                 }
-                if (cell || row.length > 0) {
-                    row.push(cell);
-                    result.push(row);
-                }
+                if (cell || row.length > 0) { row.push(cell); result.push(row); }
                 return result;
             };
 
@@ -123,39 +106,28 @@
                     try {
                         const response = await fetch(SPREADSHEET_CSV_URL);
                         const csvText = await response.text();
-                        
                         const rows = parseCSV(csvText);
                         if (rows.length < 2) return;
-
                         const headers = rows[0].map(h => h.trim());
                         const data = rows.slice(1).map(row => {
                             const obj = {};
                             headers.forEach((header, i) => {
                                 let val = row[i] || '';
-                                val = val.trim();
-                                // 不要なHTMLタグを削除
-                                val = val.replace(/<[^>]*>?/gm, '');
+                                val = val.trim().replace(/<[^>]*>?/gm, '');
                                 obj[header] = val;
                             });
                             return obj;
-                        }).filter(item => item['事業所名']); // 事業所名がない空行を除外
-
+                        }).filter(item => item['事業所名']);
                         setFacilities(data);
-                    } catch (err) {
-                        console.error("Fetch error:", err);
-                    } finally {
-                        setLoading(false);
-                    }
+                    } catch (err) { console.error("Fetch error:", err); } 
+                    finally { setLoading(false); }
                 };
                 fetchCSVData();
             }, []);
 
             useEffect(() => {
-                if (selectedFacility) {
-                    document.body.classList.add('modal-open');
-                } else {
-                    document.body.classList.remove('modal-open');
-                }
+                if (selectedFacility) { document.body.classList.add('modal-open'); } 
+                else { document.body.classList.remove('modal-open'); }
             }, [selectedFacility]);
 
             const filtered = useMemo(() => {
@@ -169,7 +141,7 @@
                     <header className="bg-blue-600 text-white p-6 shadow-md sticky top-0 z-10">
                         <div className="max-w-4xl mx-auto">
                             <h1 className="text-xl font-bold mb-4 flex items-center gap-2">
-                                <Icon name="school" /> 放デイ・ガイド
+                                <Icon name="home" /> 放デイ・ガイド
                             </h1>
                             <div className="relative max-w-xl">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -266,7 +238,7 @@
                                         <h2 className="text-2xl font-bold mb-6 text-gray-900 leading-tight">{selectedFacility['事業所名']}</h2>
                                         
                                         <div className="space-y-6">
-                                            {/* 所在地 + 電話・マップボタン */}
+                                            {/* 所在地 */}
                                             <div className="bg-gray-50 p-5 rounded-2xl">
                                                 <div className="flex items-start gap-3 mb-4">
                                                     <Icon name="map-pin" className="text-blue-500 mt-1" size={20} />
@@ -292,27 +264,42 @@
                                             </div>
 
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                {/* 営業時間セクション */}
                                                 <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100/50">
                                                     <Icon name="clock" size={16} className="text-blue-500 mb-2" />
                                                     <span className="text-xs font-bold text-blue-500 block mb-1">営業時間</span>
-                                                    <div className="space-y-3">
+                                                    <div className="space-y-4">
                                                         <div>
                                                             <p className="text-[10px] text-blue-400 font-bold mb-0.5">平日</p>
                                                             <p className="text-lg font-bold text-blue-900 leading-none">{selectedFacility['開所時間']} - {selectedFacility['閉所時間']}</p>
                                                         </div>
-                                                        {selectedFacility['学校休業日'] && (
+                                                        {(selectedFacility['学校休業日開所時間'] || selectedFacility['学校休業日閉所時間']) && (
                                                             <div className="pt-2 border-t border-blue-100/50">
                                                                 <p className="text-[10px] text-blue-400 font-bold mb-0.5">学校休業日</p>
-                                                                <p className="text-base font-bold text-blue-800 leading-none">{selectedFacility['学校休業日']}</p>
+                                                                <p className="text-lg font-bold text-blue-900 leading-none">
+                                                                    {selectedFacility['学校休業日開所時間'] || '-'} - {selectedFacility['学校休業日閉所時間'] || '-'}
+                                                                </p>
                                                             </div>
                                                         )}
                                                     </div>
                                                 </div>
+
+                                                {/* 営業日セクション */}
                                                 <div className="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100/50">
                                                     <Icon name="calendar" size={16} className="text-emerald-500 mb-2" />
                                                     <span className="text-xs font-bold text-emerald-500 block mb-1">営業日</span>
-                                                    <p className="text-lg font-bold text-emerald-900">{selectedFacility['開所日']}</p>
-                                                    {selectedFacility['閉所日'] && <p className="text-sm text-emerald-700 mt-1 font-medium italic">休：{selectedFacility['閉所日']}</p>}
+                                                    <div className="space-y-4">
+                                                        <div>
+                                                            <p className="text-[10px] text-emerald-400 font-bold mb-0.5">開所日</p>
+                                                            <p className="text-lg font-bold text-emerald-900 leading-none">{selectedFacility['開所日']}</p>
+                                                        </div>
+                                                        {selectedFacility['閉所日'] && (
+                                                            <div className="pt-2 border-t border-emerald-100/50">
+                                                                <p className="text-[10px] text-emerald-400 font-bold mb-0.5">閉所日</p>
+                                                                <p className="text-lg font-bold text-emerald-900 leading-none">{selectedFacility['閉所日']}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -326,7 +313,7 @@
                                                     </div>
                                                 </div>
                                                 <div className="bg-indigo-50/50 p-5 rounded-2xl border border-indigo-100/50">
-                                                    <Icon name="school" size={16} className="text-indigo-500 mb-2" />
+                                                    <Icon name="home" size={16} className="text-indigo-500 mb-2" />
                                                     <span className="text-xs font-bold text-indigo-500 block mb-1">主な通学先</span>
                                                     <div className="flex flex-wrap gap-1">
                                                         {selectedFacility['主な通学先'] ? selectedFacility['主な通学先'].split(/・|、|,/).map((s, idx) => (
