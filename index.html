@@ -4,17 +4,171 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>放課後等デイサービス・ガイド</title>
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-    <script src="[https://unpkg.com/react@18/umd/react.production.min.js](https://unpkg.com/react@18/umd/react.production.min.js)"></script>
-    <script src="[https://unpkg.com/react-dom@18/umd/react-dom.production.min.js](https://unpkg.com/react-dom@18/umd/react-dom.production.min.js)"></script>
-    <script src="[https://unpkg.com/@babel/standalone/babel.min.js](https://unpkg.com/@babel/standalone/babel.min.js)"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React本体 -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel (JSXの変換用) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body>
+<body class="bg-gray-50 text-gray-900">
     <div id="root"></div>
-    <!-- App.jsxを読み込み、即座に実行する設定 -->
-    <script type="text/babel" src="./App.jsx" data-type="module"></script>
-    <script type="text/babel" data-type="module">
-        import App from './App.jsx';
+
+    <script type="text/babel">
+        // LucideアイコンのコンポーネントをReactで使えるように抽出
+        const { Search, MapPin, Phone, School, Truck, Utensils, Info, X, Clock, Calendar, CheckCircle2, XCircle, ExternalLink, RefreshCw } = lucide;
+        const { useState, useEffect } = React;
+
+        /**
+         * アプリ本体のコンポーネント
+         */
+        const App = () => {
+          // 【ここにスプレッドシートの「ウェブに公開」で取得したCSV用URLを貼り付けてください】
+          const SPREADSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRndYJ984uCun7j3313vD-o_6iH6pE88Y1_2Yp8mK-7TqA39X_YI_kXpW_o5mR_y6v6R8_U6m-z_Y6Z/pub?output=csv";
+
+          const [facilities, setFacilities] = useState([]);
+          const [searchTerm, setSearchTerm] = useState('');
+          const [selectedFacility, setSelectedFacility] = useState(null);
+          const [loading, setLoading] = useState(true);
+          const [error, setError] = useState(null);
+
+          const fetchCSVData = async () => {
+            setLoading(true);
+            try {
+              if (!SPREADSHEET_CSV_URL) {
+                throw new Error('スプレッドシートのURLが設定されていません。');
+              }
+              const response = await fetch(SPREADSHEET_CSV_URL);
+              if (!response.ok) throw new Error('データの取得に失敗しました。');
+              const csvText = await response.text();
+
+              const lines = csvText.trim().split('\n');
+              const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+              const data = lines.slice(1).map(line => {
+                const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); 
+                const obj = {};
+                headers.forEach((header, i) => {
+                  let val = values[i]?.replace(/^"|"$/g, '').replace(/""/g, '"').trim();
+                  val = val?.replace(/<[^>]*>?/gm, ''); // HTMLタグ除去
+                  obj[header] = val;
+                });
+                return obj;
+              });
+              setFacilities(data);
+              setError(null);
+            } catch (err) {
+              setError("データの読み込みに失敗しました。スプレッドシートがCSV形式でウェブに公開されているか確認してください。");
+              console.error(err);
+            } finally {
+              setLoading(false);
+            }
+          };
+
+          useEffect(() => {
+            fetchCSVData();
+          }, []);
+
+          const filteredFacilities = facilities.filter(f => 
+            f['事業所名']?.includes(searchTerm) || f['主な通学先']?.includes(searchTerm) || f['住所']?.includes(searchTerm)
+          );
+
+          const openGoogleMaps = (address) => {
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`, '_blank');
+          };
+
+          return (
+            <div className="min-h-screen pb-10">
+              <header className="bg-blue-600 text-white p-6 shadow-md sticky top-0 z-10">
+                <div className="max-w-4xl mx-auto">
+                  <h1 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                    <School size={28} /> 放デイ・ガイド
+                  </h1>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                    <input
+                      type="text"
+                      placeholder="事業所名・学校名・住所で検索..."
+                      className="w-full pl-10 pr-4 py-3 rounded-xl text-gray-900 focus:outline-none shadow-inner"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </header>
+
+              <main className="max-w-4xl mx-auto p-4 mt-4">
+                {loading ? (
+                  <div className="text-center py-20 text-gray-400">
+                    <RefreshCw className="animate-spin mx-auto mb-4" size={40} />
+                    <p>読み込み中...</p>
+                  </div>
+                ) : error ? (
+                  <div className="bg-red-50 text-red-600 p-8 rounded-3xl text-center border border-red-100">{error}</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {filteredFacilities.map((facility, index) => (
+                      <div 
+                        key={index} 
+                        className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden cursor-pointer border border-gray-100 flex flex-col"
+                        onClick={() => setSelectedFacility(facility)}
+                      >
+                        <img 
+                          src={facility.pic1 || 'https://images.unsplash.com/photo-1594608661623-aa0bd3a69d98?w=400'} 
+                          className="h-48 w-full object-cover"
+                          alt={facility['事業所名']}
+                        />
+                        <div className="p-5 flex-grow flex flex-col">
+                          <h2 className="text-lg font-bold mb-2">{facility['事業所名']}</h2>
+                          <p className="text-gray-500 text-xs mb-4 flex items-center gap-1">
+                            <MapPin size={14} /> {facility['住所']}
+                          </p>
+                          <div className="mt-auto py-2 bg-blue-50 text-blue-600 rounded-lg text-center font-bold text-sm">
+                            詳細を見る
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </main>
+
+              {selectedFacility && (
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center backdrop-blur-sm" onClick={() => setSelectedFacility(null)}>
+                  <div className="bg-white w-full max-w-2xl max-h-[90vh] rounded-t-3xl sm:rounded-3xl overflow-y-auto p-6 relative" onClick={e => e.stopPropagation()}>
+                    <button onClick={() => setSelectedFacility(null)} className="absolute top-4 right-4 p-2 bg-gray-100 rounded-full"><X /></button>
+                    <h2 className="text-2xl font-bold mb-6">{selectedFacility['事業所名']}</h2>
+                    <div className="space-y-6">
+                      <div className="bg-gray-50 p-4 rounded-xl text-sm">
+                        <p className="font-bold text-gray-400 mb-1">住所</p>
+                        <p className="font-bold">{selectedFacility['住所']}</p>
+                        <button onClick={() => openGoogleMaps(selectedFacility['住所'])} className="mt-2 text-blue-600 font-bold flex items-center gap-1 underline">
+                          Googleマップで開く
+                        </button>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-gray-400 mb-1">主な通学先</p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedFacility['主な通学先']?.split('・').map((s, i) => (
+                            <span key={i} className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold">{s}</span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="bg-blue-50 p-6 rounded-2xl">
+                        <p className="text-gray-700 leading-relaxed italic">"{selectedFacility['アピールポイント']}"</p>
+                      </div>
+                      <a href={`tel:${selectedFacility['電話番号']}`} className="block w-full bg-blue-600 text-white text-center py-4 rounded-2xl font-bold shadow-lg">
+                        電話で問い合わせ：{selectedFacility['電話番号']}
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        };
+
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
