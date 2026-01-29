@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>放課後等デイサービスのリスト</title>
+    <title>放課後等デイサービス・ガイド</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React & ReactDOM -->
@@ -131,8 +131,11 @@
             }, [selectedFacility]);
 
             const filtered = useMemo(() => {
+                const lowerSearch = searchTerm.toLowerCase();
                 return facilities.filter(f => 
-                    f['事業所名']?.includes(searchTerm) || f['住所']?.includes(searchTerm)
+                    (f['事業所名'] || '').toLowerCase().includes(lowerSearch) || 
+                    (f['住所'] || '').toLowerCase().includes(lowerSearch) ||
+                    (f['主な通学先'] || '').toLowerCase().includes(lowerSearch)
                 );
             }, [facilities, searchTerm]);
 
@@ -141,7 +144,7 @@
                     <header className="bg-blue-600 text-white p-6 shadow-md sticky top-0 z-10">
                         <div className="max-w-4xl mx-auto">
                             <h1 className="text-xl font-bold mb-4 flex items-center gap-2">
-                                <Icon name="home" /> 放デイ・ガイド
+                                <Icon name="home" /> 清水区放デイガイド
                             </h1>
                             <div className="relative max-w-xl">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -149,7 +152,7 @@
                                 </span>
                                 <input
                                     type="text"
-                                    placeholder="事業所名や住所で検索..."
+                                    placeholder="事業所・住所・学校名で検索..."
                                     className="w-full pl-10 pr-4 py-3 rounded-xl text-gray-900 focus:outline-none shadow-inner border-none"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -344,4 +347,3 @@
     </script>
 </body>
 </html>
-
