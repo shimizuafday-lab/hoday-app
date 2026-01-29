@@ -7,7 +7,7 @@ import { Search, MapPin, Phone, School, Truck, Utensils, Info, X, Clock, Calenda
  * 2. 形式を「コンマ区切り値(.csv)」にして公開
  * 3. 発行されたURLを下のダブルクォーテーション内 (" ") に貼り付けてください
  */
-const SPREADSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1ySyyyqHGJuNsiV0E4GVt5PrKH5R3leWOv6RcTL0db44/edit?usp=sharing"; 
+const SPREADSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-3HsrNideEQfqOrC604NY0NkwaQ7sxjMog2vuwVymliZN6XMsE58_wA-rErOJMMHP9Y49BIUiLDq1/pub?gid=634817218&single=true&output=csv"; 
 
 const App = () => {
   const [facilities, setFacilities] = useState([]);
@@ -332,5 +332,6 @@ const App = () => {
     </div>
   );
 };
+
 
 export default App;
