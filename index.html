@@ -73,24 +73,73 @@
             const [selectedFacility, setSelectedFacility] = useState(null);
             const [loading, setLoading] = useState(true);
 
+            // CSVパース用の関数（改行を含むセルに対応）
+            const parseCSV = (text) => {
+                const result = [];
+                let row = [];
+                let cell = '';
+                let inQuotes = false;
+
+                for (let i = 0; i < text.length; i++) {
+                    const char = text[i];
+                    const nextChar = text[i + 1];
+
+                    if (inQuotes) {
+                        if (char === '"' && nextChar === '"') {
+                            cell += '"';
+                            i++;
+                        } else if (char === '"') {
+                            inQuotes = false;
+                        } else {
+                            cell += char;
+                        }
+                    } else {
+                        if (char === '"') {
+                            inQuotes = true;
+                        } else if (char === ',') {
+                            row.push(cell);
+                            cell = '';
+                        } else if (char === '\n' || char === '\r') {
+                            if (char === '\r' && nextChar === '\n') i++;
+                            row.push(cell);
+                            if (row.length > 1 || row[0] !== '') result.push(row);
+                            row = [];
+                            cell = '';
+                        } else {
+                            cell += char;
+                        }
+                    }
+                }
+                if (cell || row.length > 0) {
+                    row.push(cell);
+                    result.push(row);
+                }
+                return result;
+            };
+
             useEffect(() => {
                 const fetchCSVData = async () => {
                     setLoading(true);
                     try {
                         const response = await fetch(SPREADSHEET_CSV_URL);
                         const csvText = await response.text();
-                        const lines = csvText.trim().split('\n');
-                        const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-                        const data = lines.slice(1).map(line => {
-                            const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); 
+                        
+                        const rows = parseCSV(csvText);
+                        if (rows.length < 2) return;
+
+                        const headers = rows[0].map(h => h.trim());
+                        const data = rows.slice(1).map(row => {
                             const obj = {};
                             headers.forEach((header, i) => {
-                                let val = values[i]?.replace(/^"|"$/g, '').replace(/""/g, '"').trim();
-                                val = val?.replace(/<[^>]*>?/gm, '');
+                                let val = row[i] || '';
+                                val = val.trim();
+                                // 不要なHTMLタグを削除
+                                val = val.replace(/<[^>]*>?/gm, '');
                                 obj[header] = val;
                             });
                             return obj;
-                        });
+                        }).filter(item => item['事業所名']); // 事業所名がない空行を除外
+
                         setFacilities(data);
                     } catch (err) {
                         console.error("Fetch error:", err);
@@ -145,7 +194,7 @@
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {filtered.map((f, i) => (
+                                {filtered.length > 0 ? filtered.map((f, i) => (
                                     <div 
                                         key={i} 
                                         className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden cursor-pointer border border-gray-100 flex flex-col group"
@@ -155,6 +204,7 @@
                                             <img 
                                                 src={f.pic1 || 'https://images.unsplash.com/photo-1594608661623-aa0bd3a69d98?w=500'} 
                                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                                alt={f['事業所名']}
                                             />
                                             <div className="absolute top-3 left-3 flex gap-1">
                                                 {f['送迎']?.includes('有') && (
@@ -180,7 +230,11 @@
                                             </div>
                                         </div>
                                     </div>
-                                ))}
+                                )) : (
+                                    <div className="col-span-full text-center py-20 text-gray-400">
+                                        <p>該当する事業所が見つかりませんでした。</p>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </main>
@@ -202,10 +256,10 @@
                                 </button>
 
                                 <div className="flex-grow overflow-y-auto custom-scrollbar">
-                                    <img src={selectedFacility.pic1 || 'https://images.unsplash.com/photo-1594608661623-aa0bd3a69d98?w=800'} className="w-full aspect-video object-cover" />
+                                    <img src={selectedFacility.pic1 || 'https://images.unsplash.com/photo-1594608661623-aa0bd3a69d98?w=800'} className="w-full aspect-video object-cover" alt="Main" />
                                     <div className="grid grid-cols-2 gap-0.5 mt-0.5">
-                                        {selectedFacility.pic2 && <img src={selectedFacility.pic2} className="w-full aspect-video object-cover" />}
-                                        {selectedFacility.pic3 && <img src={selectedFacility.pic3} className="w-full aspect-video object-cover" />}
+                                        {selectedFacility.pic2 && <img src={selectedFacility.pic2} className="w-full aspect-video object-cover" alt="Pic 2" />}
+                                        {selectedFacility.pic3 && <img src={selectedFacility.pic3} className="w-full aspect-video object-cover" alt="Pic 3" />}
                                     </div>
 
                                     <div className="p-6 sm:p-10">
