@@ -4,10 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>放課後等デイサービス・ガイド</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <script src="[https://unpkg.com/react@18/umd/react.production.min.js](https://unpkg.com/react@18/umd/react.production.min.js)"></script>
+    <script src="[https://unpkg.com/react-dom@18/umd/react-dom.production.min.js](https://unpkg.com/react-dom@18/umd/react-dom.production.min.js)"></script>
+    <script src="[https://unpkg.com/@babel/standalone/babel.min.js](https://unpkg.com/@babel/standalone/babel.min.js)"></script>
 </head>
 <body>
     <div id="root"></div>
-    <!-- ここでReactを動かします（公開時はビルドツールを使用しますが、テスト用にはCDN等も使えます） -->
+    <!-- App.jsxを読み込み、即座に実行する設定 -->
+    <script type="text/babel" src="./App.jsx" data-type="module"></script>
+    <script type="text/babel" data-type="module">
+        import App from './App.jsx';
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </body>
 </html>
