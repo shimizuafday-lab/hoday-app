@@ -15,11 +15,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
         body { font-family: 'Noto Sans JP', sans-serif; }
-        
-        /* モーダル表示時に背景を固定 */
         body.modal-open { overflow: hidden; }
-        
-        /* スクロールバーのカスタマイズ */
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
@@ -67,11 +63,25 @@
 
         const App = () => {
             const SPREADSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-3HsrNideEQfqOrC604NY0NkwaQ7sxjMog2vuwVymliZN6XMsE58_wA-rErOJMMHP9Y49BIUiLDq1/pub?output=csv";
+            const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1594608661623-aa0bd3a69d98?w=800';
             
             const [facilities, setFacilities] = useState([]);
             const [searchTerm, setSearchTerm] = useState('');
             const [selectedFacility, setSelectedFacility] = useState(null);
             const [loading, setLoading] = useState(true);
+
+            // URLを画像表示用に変換する関数（Googleドライブ対応）
+            const formatImageUrl = (url) => {
+                if (!url) return DEFAULT_IMAGE;
+                
+                // Google Driveの共有リンクを直リンクに変換
+                if (url.includes('drive.google.com')) {
+                    const fileId = url.match(/\/d\/([^/]+)/)?.[1] || url.match(/id=([^&]+)/)?.[1];
+                    if (fileId) return `https://drive.google.com/uc?export=view&id=${fileId}`;
+                }
+                
+                return url;
+            };
 
             const parseCSV = (text) => {
                 const result = [];
@@ -144,7 +154,7 @@
                     <header className="bg-blue-600 text-white p-6 shadow-md sticky top-0 z-10">
                         <div className="max-w-4xl mx-auto">
                             <h1 className="text-xl font-bold mb-4 flex items-center gap-2">
-                                <Icon name="home" /> 清水区放デイガイド
+                                <Icon name="home" /> 放デイ・ガイド
                             </h1>
                             <div className="relative max-w-xl">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -177,9 +187,10 @@
                                     >
                                         <div className="h-48 w-full bg-gray-200 relative overflow-hidden">
                                             <img 
-                                                src={f.pic1 || 'https://images.unsplash.com/photo-1594608661623-aa0bd3a69d98?w=500'} 
+                                                src={formatImageUrl(f.pic1)} 
                                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                                 alt={f['事業所名']}
+                                                onError={(e) => { e.target.src = DEFAULT_IMAGE; }}
                                             />
                                             <div className="absolute top-3 left-3 flex gap-1">
                                                 {f['送迎']?.includes('有') && (
@@ -231,17 +242,33 @@
                                 </button>
 
                                 <div className="flex-grow overflow-y-auto custom-scrollbar">
-                                    <img src={selectedFacility.pic1 || 'https://images.unsplash.com/photo-1594608661623-aa0bd3a69d98?w=800'} className="w-full aspect-video object-cover" alt="Main" />
+                                    <img 
+                                        src={formatImageUrl(selectedFacility.pic1)} 
+                                        className="w-full aspect-video object-cover" 
+                                        alt="Main" 
+                                        onError={(e) => { e.target.src = DEFAULT_IMAGE; }}
+                                    />
+                                    
                                     <div className="grid grid-cols-2 gap-0.5 mt-0.5">
-                                        {selectedFacility.pic2 && <img src={selectedFacility.pic2} className="w-full aspect-video object-cover" alt="Pic 2" />}
-                                        {selectedFacility.pic3 && <img src={selectedFacility.pic3} className="w-full aspect-video object-cover" alt="Pic 3" />}
+                                        {[2, 3, 4, 5, 6].map(num => {
+                                            const imgUrl = selectedFacility[`pic${num}`];
+                                            if (!imgUrl) return null;
+                                            return (
+                                                <img 
+                                                    key={num} 
+                                                    src={formatImageUrl(imgUrl)} 
+                                                    className="w-full aspect-video object-cover" 
+                                                    alt={`Pic ${num}`} 
+                                                    onError={(e) => { e.target.style.display = 'none'; }}
+                                                />
+                                            );
+                                        })}
                                     </div>
 
                                     <div className="p-6 sm:p-10">
                                         <h2 className="text-2xl font-bold mb-6 text-gray-900 leading-tight">{selectedFacility['事業所名']}</h2>
                                         
                                         <div className="space-y-6">
-                                            {/* 所在地 */}
                                             <div className="bg-gray-50 p-5 rounded-2xl">
                                                 <div className="flex items-start gap-3 mb-4">
                                                     <Icon name="map-pin" className="text-blue-500 mt-1" size={20} />
@@ -267,7 +294,6 @@
                                             </div>
 
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                {/* 営業時間セクション */}
                                                 <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100/50">
                                                     <Icon name="clock" size={16} className="text-blue-500 mb-2" />
                                                     <span className="text-xs font-bold text-blue-500 block mb-1">営業時間</span>
@@ -287,7 +313,6 @@
                                                     </div>
                                                 </div>
 
-                                                {/* 営業日セクション */}
                                                 <div className="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100/50">
                                                     <Icon name="calendar" size={16} className="text-emerald-500 mb-2" />
                                                     <span className="text-xs font-bold text-emerald-500 block mb-1">営業日</span>
