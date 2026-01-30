@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>放課後等デイサービス・ガイド</title>
+    <title>放課後等デイサービスご利用ガイド</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React & ReactDOM -->
@@ -19,6 +19,9 @@
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        /* スムーズな遷移のためのアニメーション */
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900">
@@ -75,16 +78,16 @@
             
             const [facilities, setFacilities] = useState([]);
             const [searchTerm, setSearchTerm] = useState('');
+            const [selectedDistrict, setSelectedDistrict] = useState('すべて');
             const [selectedFacility, setSelectedFacility] = useState(null);
-            const [activeGuide, setActiveGuide] = useState(null); // 'intro' or 'flow'
+            const [activeGuide, setActiveGuide] = useState(null);
             const [loading, setLoading] = useState(true);
 
-            // ガイド画像の取得（スプレッドシートの特定の列にあると想定）
             const guideImages = useMemo(() => {
                 const first = facilities[0] || {};
                 return {
-                    intro: first.pic10 || '', // pic10列を想定
-                    flow: first.pic11 || ''   // pic11列を想定
+                    intro: first.pic10 || '',
+                    flow: first.pic11 || ''
                 };
             }, [facilities]);
 
@@ -156,12 +159,19 @@
 
             const filtered = useMemo(() => {
                 const lowerSearch = searchTerm.toLowerCase();
-                return facilities.filter(f => 
-                    (f['事業所名'] || '').toLowerCase().includes(lowerSearch) || 
-                    (f['住所'] || '').toLowerCase().includes(lowerSearch) ||
-                    (f['主な通学先'] || '').toLowerCase().includes(lowerSearch)
-                );
-            }, [facilities, searchTerm]);
+                return facilities.filter(f => {
+                    const matchesSearch = 
+                        (f['事業所名'] || '').toLowerCase().includes(lowerSearch) || 
+                        (f['住所'] || '').toLowerCase().includes(lowerSearch) ||
+                        (f['主な通学先'] || '').toLowerCase().includes(lowerSearch);
+                    
+                    const matchesDistrict = 
+                        selectedDistrict === 'すべて' || 
+                        (f['住所'] || '').includes(selectedDistrict);
+                    
+                    return matchesSearch && matchesDistrict;
+                });
+            }, [facilities, searchTerm, selectedDistrict]);
 
             return (
                 <div className="min-h-screen pb-10">
@@ -169,7 +179,7 @@
                         <div className="max-w-4xl mx-auto">
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                                 <h1 className="text-lg font-bold flex items-center gap-2">
-                                    <Icon name="home" /> 清水区の放課後等デイサービスガイド
+                                    <Icon name="home" /> 放課後等デイサービスご利用ガイド
                                 </h1>
                                 <div className="flex gap-2">
                                     <button 
@@ -186,7 +196,8 @@
                                     </button>
                                 </div>
                             </div>
-                            <div className="relative max-w-xl">
+                            
+                            <div className="relative max-w-xl mb-4">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                                     <Icon name="search" size={18} />
                                 </span>
@@ -198,6 +209,23 @@
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
+
+                            {/* 区の切り替えタブ */}
+                            <div className="flex gap-1 overflow-x-auto no-scrollbar pb-1">
+                                {['すべて', '葵区', '駿河区', '清水区'].map(district => (
+                                    <button
+                                        key={district}
+                                        onClick={() => setSelectedDistrict(district)}
+                                        className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+                                            selectedDistrict === district 
+                                            ? 'bg-white text-blue-600 shadow-md scale-105' 
+                                            : 'bg-blue-700/50 text-blue-100 hover:bg-blue-500'
+                                        }`}
+                                    >
+                                        {district}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </header>
 
@@ -208,7 +236,7 @@
                                 <p>読み込み中...</p>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 fade-in">
                                 {filtered.length > 0 ? filtered.map((f, i) => (
                                     <div 
                                         key={i} 
@@ -222,15 +250,19 @@
                                                 alt={f['事業所名']}
                                                 onError={(e) => { e.target.src = DEFAULT_IMAGE; }}
                                             />
-                                            <div className="absolute top-3 left-3 flex gap-1">
+                                            <div className="absolute top-3 left-3 flex flex-wrap gap-1">
+                                                {f['住所']?.includes('葵区') && <span className="bg-emerald-600 text-white text-[9px] px-2 py-1 rounded font-bold shadow-sm">葵区</span>}
+                                                {f['住所']?.includes('駿河区') && <span className="bg-orange-600 text-white text-[9px] px-2 py-1 rounded font-bold shadow-sm">駿河区</span>}
+                                                {f['住所']?.includes('清水区') && <span className="bg-blue-600 text-white text-[9px] px-2 py-1 rounded font-bold shadow-sm">清水区</span>}
+                                                
                                                 {f['送迎']?.includes('有') && (
-                                                    <span className="bg-blue-600/90 text-white text-[10px] px-2 py-1 rounded-md font-bold backdrop-blur-sm flex items-center gap-1">
-                                                        <Icon name="truck" size={12} /> 送迎あり
+                                                    <span className="bg-slate-700/80 text-white text-[9px] px-2 py-1 rounded font-bold backdrop-blur-sm flex items-center gap-1 shadow-sm">
+                                                        <Icon name="truck" size={10} /> 送迎
                                                     </span>
                                                 )}
                                                 {f['食事']?.includes('有') && (
-                                                    <span className="bg-orange-500/90 text-white text-[10px] px-2 py-1 rounded-md font-bold backdrop-blur-sm flex items-center gap-1">
-                                                        <Icon name="utensils" size={12} /> 食事あり
+                                                    <span className="bg-slate-700/80 text-white text-[9px] px-2 py-1 rounded font-bold backdrop-blur-sm flex items-center gap-1 shadow-sm">
+                                                        <Icon name="utensils" size={10} /> 食事
                                                     </span>
                                                 )}
                                             </div>
@@ -242,7 +274,6 @@
                                                 <span className="line-clamp-1">{f['住所']}</span>
                                             </div>
                                             
-                                            {/* 主な通学先の表示を追加 */}
                                             {f['主な通学先'] && (
                                                 <div className="flex flex-wrap gap-1 mt-1">
                                                     {f['主な通学先'].split(/・|、|,/).slice(0, 3).map((s, idx) => (
@@ -270,7 +301,7 @@
                         )}
                     </main>
 
-                    {/* ガイドモーダル (初めての方へ / ご利用の流れ) */}
+                    {/* ガイドモーダル */}
                     {activeGuide && (
                         <div 
                             className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-md"
@@ -301,13 +332,14 @@
                         </div>
                     )}
 
+                    {/* 詳細モーダル */}
                     {selectedFacility && (
                         <div 
                             className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-0 sm:p-4 backdrop-blur-sm"
                             onClick={() => setSelectedFacility(null)}
                         >
                             <div 
-                                className="bg-white w-full max-w-2xl h-full sm:h-auto sm:max-h-[90vh] sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col relative"
+                                className="bg-white w-full max-w-2xl h-full sm:h-auto sm:max-h-[90vh] sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col relative animate-in fade-in"
                                 onClick={e => e.stopPropagation()}
                             >
                                 <button 
