@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>放課後等デイサービスご利用ガイド</title>
+    <title>放課後等デイサービス・ガイド</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React & ReactDOM -->
@@ -189,9 +189,9 @@
                                 </h1>
                                 <button 
                                     onClick={() => setMenuOpen(true)}
-                                    className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors border border-white/20"
+                                    className="p-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors border border-white/20"
                                 >
-                                    <Icon name="menu" size={20} />
+                                    <Icon name="menu" size={18} />
                                 </button>
                             </div>
                             
@@ -208,7 +208,6 @@
                                 />
                             </div>
 
-                            {/* 区の切り替えタブ */}
                             <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1 max-w-full">
                                 {['すべて', '葵区', '駿河区', '清水区'].map(district => (
                                     <button
@@ -227,35 +226,35 @@
                         </div>
                     </header>
 
-                    {/* ハンバーガーメニュードロワー */}
+                    {/* ハンバーガーメニュードロワー（幅を少し小さく、余白も調整） */}
                     {menuOpen && (
                         <div 
                             className="fixed inset-0 bg-black/60 z-[60] flex justify-end"
                             onClick={() => setMenuOpen(false)}
                         >
                             <div 
-                                className="bg-white w-72 h-full shadow-2xl p-6 flex flex-col gap-6 animate-in slide-in-from-right duration-300"
+                                className="bg-white w-60 h-full shadow-2xl p-5 flex flex-col gap-4 animate-in slide-in-from-right duration-300"
                                 onClick={e => e.stopPropagation()}
                             >
-                                <div className="flex justify-between items-center pb-4 border-b">
-                                    <span className="font-bold text-gray-900">メニュー</span>
-                                    <button onClick={() => setMenuOpen(false)} className="p-2 text-gray-400 hover:text-gray-900">
-                                        <Icon name="x" size={24} />
+                                <div className="flex justify-between items-center pb-3 border-b">
+                                    <span className="text-sm font-bold text-gray-900">メニュー</span>
+                                    <button onClick={() => setMenuOpen(false)} className="p-1 text-gray-400 hover:text-gray-900">
+                                        <Icon name="x" size={20} />
                                     </button>
                                 </div>
-                                <div className="flex flex-col gap-2">
+                                <div className="flex flex-col gap-1.5">
                                     <button 
                                         onClick={() => { setActiveGuide('intro'); setMenuOpen(false); }}
-                                        className="flex items-center gap-3 p-4 rounded-xl hover:bg-blue-50 text-blue-700 font-bold transition-colors text-left border border-transparent hover:border-blue-100"
+                                        className="flex items-center gap-2.5 p-3 rounded-xl hover:bg-blue-50 text-blue-700 font-bold transition-colors text-left border border-transparent hover:border-blue-100 text-sm"
                                     >
-                                        <Icon name="info" size={20} className="text-blue-500" />
+                                        <Icon name="info" size={18} className="text-blue-500" />
                                         <span>初めての方へ</span>
                                     </button>
                                     <button 
                                         onClick={() => { setActiveGuide('flow'); setMenuOpen(false); }}
-                                        className="flex items-center gap-3 p-4 rounded-xl hover:bg-orange-50 text-orange-700 font-bold transition-colors text-left border border-transparent hover:border-orange-100"
+                                        className="flex items-center gap-2.5 p-3 rounded-xl hover:bg-orange-50 text-orange-700 font-bold transition-colors text-left border border-transparent hover:border-orange-100 text-sm"
                                     >
-                                        <Icon name="file" size={20} className="text-orange-500" />
+                                        <Icon name="file" size={18} className="text-orange-500" />
                                         <span>ご利用の流れ</span>
                                     </button>
                                 </div>
