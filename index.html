@@ -44,7 +44,7 @@
                         <circle cx="17" cy="18" r="2" />
                     </g>
                 ),
-                utensils: <><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" /><path d="M7 2v20" /><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" /></>,
+                utensils: <><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" /><path d="M7 2v20" /><path d="M21 15V2 v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" /></>,
                 "map-pin": <><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></>,
                 "chevron-right": <path d="m9 18 6-6-6-6" />,
                 x: <><path d="M18 6 6 18" /><path d="m6 6 12 12" /></>,
@@ -221,12 +221,12 @@
 
                     {menuOpen && (
                         <div className="fixed inset-0 bg-black/60 z-[60] flex justify-end" onClick={() => setMenuOpen(false)}>
-                            <div className="bg-white w-60 h-full shadow-2xl p-5 flex flex-col gap-4 animate-in slide-in-from-right duration-300" onClick={e => e.stopPropagation()}>
+                            <div className="bg-white w-64 h-full shadow-2xl p-5 flex flex-col gap-4 animate-in slide-in-from-right duration-300" onClick={e => e.stopPropagation()}>
                                 <div className="flex justify-between items-center pb-3 border-b">
                                     <span className="text-sm font-bold text-gray-900">メニュー</span>
                                     <button onClick={() => setMenuOpen(false)} className="p-1 text-gray-400 hover:text-gray-900"><Icon name="x" size={20} /></button>
                                 </div>
-                                <div className="flex flex-col gap-1.5">
+                                <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar pr-1">
                                     <button onClick={() => { setActiveGuide('intro'); setMenuOpen(false); }} className="flex items-center gap-2.5 p-3 rounded-xl hover:bg-blue-50 text-blue-700 font-bold transition-colors text-left border border-transparent hover:border-blue-100 text-sm">
                                         <Icon name="info" size={18} className="text-blue-500" />
                                         <span>初めての方へ</span>
@@ -235,6 +235,28 @@
                                         <Icon name="file" size={18} className="text-orange-500" />
                                         <span>ご利用の流れ</span>
                                     </button>
+
+                                    {/* 注記セクション */}
+                                    <div className="mt-4 pt-4 border-t border-gray-100 space-y-4">
+                                        <div>
+                                            <h4 className="text-[11px] font-black text-gray-400 mb-1.5 px-1 tracking-tighter uppercase">掲載情報に関するお願い</h4>
+                                            <p className="text-[10px] leading-relaxed text-gray-600 px-1">
+                                                本ガイドに掲載されている情報は、調査・登録時点のものです。空き状況や事業所の体制などは日々変化いたします。「今見ている情報が常に最新の状態」とは限りません。もし掲載内容で少しでも気になる点がございましたら、遠慮なく各事業所へ直接お電話やウェブサイトからご連絡いただくことをお勧めします。
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <h4 className="text-[11px] font-black text-gray-400 mb-1.5 px-1 tracking-tighter uppercase">掲載写真について</h4>
+                                            <p className="text-[10px] leading-relaxed text-gray-600 px-1">
+                                                各事業所のページに使用されている写真は、施設の雰囲気をお伝えするための「イメージ」です。実際の活動内容は、お子さまの特性や年齢等によって異なる場合があります。具体的な活動内容や最新の設備については、見学や体験の際にご確認ください。
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <h4 className="text-[11px] font-black text-gray-400 mb-1.5 px-1 tracking-tighter uppercase">学校の表示・送迎範囲について</h4>
+                                            <p className="text-[10px] leading-relaxed text-gray-600 px-1">
+                                                「主な通学先」として表示されている学校名や実績は、その年（年度）の契約状況や送迎ルートによって随時変更されます。昨年まで実績があった学校でも、現在の定員やスタッフ配置によって対応が難しい場合、または新たに広域へ対応している場合がございます。現在の正確な対応状況については、必ず事前にお問い合わせください。
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -368,7 +390,6 @@
                                                         )}
                                                     </div>
                                                 </div>
-                                                {/* 営業日・閉所日セクション：配色アップデート */}
                                                 <div className="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100/50">
                                                     <Icon name="calendar" size={16} className="text-emerald-500 mb-2" />
                                                     <span className="text-xs font-bold text-emerald-500 block mb-1">営業日</span>
